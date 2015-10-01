@@ -8,11 +8,12 @@ old_new_salaries = [
     (2197, 2897), (2706, 2782), (2712, 3056), (2666, 2959), (2149, 2377)
 ]
 
-def is_high_raise(r):
-    ???
 
-raises = map(???, old_new_salaries)
+def is_high_raise(r):
+    return r > 500
+
+raises = map(lambda x: x[1] - x[0], old_new_salaries)
 high_raises = filter(is_high_raise, raises)
-total_high_raises = reduce(lambda a,b: a + b, high_raises)
+total_high_raises = reduce(lambda a, b: a + b, high_raises)
 
 print "total high raises: %s" % total_high_raises
