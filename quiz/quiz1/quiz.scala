@@ -14,3 +14,4 @@ val high_raises = raises.filter(is_high_raise)
 val total_high_raises = high_raises.reduce((a, b) => a + b)
 
 println(s"total high raises: $total_high_raises")
+
