@@ -7,22 +7,32 @@ sc = SparkContext(conf=conf)
 _dir = os.path.dirname(os.path.dirname(__file__))
 input_file = sc.textFile(_dir + '/input')
 
-node_contrib = (
+lines = (
     input_file
-    .map(lambda x: x.split(': '))
-    .map(lambda t: (t[0], t[1].split(', ')))  # (a, (b, c))
-    .flatMap(
-        lambda node: (
-            (node[0], (to, 1/len(node[1]))) for to in node[1]
-            )
-        )
-    )  # (node, (to, contribution))
-node_contrib = node_contrib.map(lambda op: (op[1][0], (op[0], op[1][1])))  # (to, (from, contrib))
+    .map(lambda l: l.split(": "))
+    .map(lambda l: (l[0], l[1].split(", ")))
+)  # (a, (b,c,d))
 
-node_rank = (
-    input_file
-    .map(lambda x: (x.split(": ")[0], 1))
-)  # (node, rank)
-# ###############################
-for i in range(100):
-    node_rank.leftOutterJoin(node_contrib)
+page_rank = (
+    lines
+    .map(lambda l: (l[0], (1.0, len(l[1]))))  # (Page, (Rank, NumOfOutgoingCons))->(Page, Contribution)
+)
+for i in range(3):
+    print("we are in iteration number: " + str(i))
+    page_contribution = page_rank.map(lambda p: (p[0], (p[1][0]/p[1][1])))  # -> (page, contribution)
+    contribution_rdd = (
+        page_contribution
+        .leftOuterJoin(lines)  # (page, (Contribution, a,b,c,d,...))
+        .flatMap(lambda con: ((con[0], (to, con[1][0])) for to in con[1][1]))
+        .map(lambda con: (con[1][0], con[1][1]))
+    )  # (to, contribution)
+    page_rank = (
+        page_rank
+        .join(contribution_rdd)  # (Page, ((Rank, NumOfOutgoingConnections), contrib, contrib,..))
+        .map(lambda x: ((x[0], x[1][0]), x[1][1]))
+        .reduceByKey(lambda a, b: a+b)
+        .map(lambda pr: (pr[0][0], (pr[1]*0.85 + 0.15, pr[0][1][1])))
+    )
+print("################################################")
+print(page_rank.collect())
+page_rank.saveAsTextFile("output")
